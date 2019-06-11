@@ -36,11 +36,8 @@ func NewClient(token string) *Client {
 
 // Ping attempts to connect to the Monzo API using the given
 // client.
-//
-// No "ping" endpoint currently exists at Monzo, so for now
-// this simply queries the /accounts endpoint.
 func (c *Client) Ping() error {
-	req, err := c.NewRequest(http.MethodGet, "accounts", nil)
+	req, err := c.NewRequest(http.MethodGet, "ping/whoami", nil)
 	if err != nil {
 		return err
 	}
