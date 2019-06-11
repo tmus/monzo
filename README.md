@@ -14,7 +14,9 @@ go get -u github.com/tmus/monzo
 > for anything serious, and make sure you use version numbers
 > in your `go.mod` file.
 
-1. Create a `monzo.Client` and pass it your Monzo access token:
+### Creating a Client
+
+Create a `monzo.Client` and pass it your Monzo access token:
 
 ```go
 token, _ := os.LookupEnv("MONZO_TOKEN")
@@ -31,7 +33,9 @@ if err := c.Ping(); err != nil {
 }
 ```
 
-2. Call the `Accounts` function on the client to return a slice
+### Retrieving Accounts
+
+Call the `Accounts` function on the client to return a slice
 of accounts associated with the Monzo token.
 
 ```go
@@ -42,12 +46,35 @@ for _, acc := range accs {
 }
 ```
 
-3. You can call the `Account` function on the client to return
-a single account.
+#### Retrieving a Single Account
+
+If you know the account id, you can call the `Account` function
+on the client to return a single account.
 
 ```go
 acc, _ := c.Account("acc_00000XXXXXXXXXXXXXXXXX")
 fmt.Println(acc.ID)
 ```
+
+### Account Balance
+
+The `Account` struct is fluent: it contains a pointer to the
+monzo.Client, meaning further API calls can be done directly
+from the Account, such as retrieving a balance:
+
+```go
+acc, _ := c.Account("acc_00000XXXXXXXXXXXXXXXXX")
+
+b, _ := acc.Balance()
+```
+
+The `Balance` struct contains all the information about an
+Account's balance:
+
+- `Balance.Balance` returns the amount available to spend
+- `Balance.Total` returns the total balance (including money
+  in Pots)
+- `Balance.WithSavings` includes the total balance including
+  money in Savings pots.
 
 **More details coming soon.**
