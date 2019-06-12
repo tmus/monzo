@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,27 +18,50 @@ type Transaction struct {
 	Description string
 	Notes       string
 
-	// Created       time.Time
+	Created       time.Time
 	DeclineReason string
 	IsLoad        bool
-	// Settled       time.Time
-	Category string
+	Settled       time.Time
+	Category      string
 	// Merchant Merchant
 	Metadata interface{}
-}
 
-func (t Transaction) String() string {
-	return fmt.Sprintf("[%s]: %s %.2f %s", t.ID, t.Currency, float64(t.Amount)/100, t.Description)
+	client *Client
 }
 
 // Transactions gets a number of transactions for an account from the Monzo API.
 // A bit useless atm because Monzo's API returns transactions in ascending order.
-//
-// TODO: Find a way around this.
 func (a Account) Transactions(limit int) ([]Transaction, error) {
 	params := make(map[string]string)
 	params["limit"] = strconv.Itoa(limit)
 	return a.getTransactions(params)
+}
+
+func (a Account) Transaction(id string) (Transaction, error) {
+	req, err := a.client.resourceRequest("transactions/" + id)
+	if err != nil {
+		return Transaction{}, err
+	}
+
+	resp, _ := a.client.Do(req)
+
+	b := new(bytes.Buffer)
+	b.ReadFrom(resp.Body)
+	str := b.String()
+
+	if resp.StatusCode != http.StatusOK {
+		return Transaction{}, fmt.Errorf("failed to fetch transaction: %s", str)
+	}
+
+	bytes := b.Bytes()
+	var transaction Transaction
+	if err := unwrapJSON(bytes, "transaction", &transaction); err != nil {
+		return Transaction{}, err
+	}
+
+	transaction.client = a.client
+
+	return transaction, nil
 }
 
 // TransactionsSince returns the transactions that have occured since a given Time.
@@ -97,5 +122,35 @@ func (a Account) getTransactions(params map[string]string) ([]Transaction, error
 		return nil, err
 	}
 
+	for _, tx := range transactions {
+		tx.client = a.client
+	}
+
 	return transactions, nil
+}
+
+func (t Transaction) Note(note string) error {
+	endpoint := "/transactions/" + t.ID
+
+	data := url.Values{}
+	data.Add("metadata[notes]", note)
+
+	req, err := t.client.NewRequest(http.MethodPatch, endpoint, strings.NewReader(data.Encode()))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, _ := t.client.Do(req)
+
+	b := new(bytes.Buffer)
+	b.ReadFrom(resp.Body)
+	str := b.String()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to create note: %s", str)
+	}
+
+	return nil
 }
