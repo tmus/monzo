@@ -130,10 +130,19 @@ func (a Account) getTransactions(params map[string]string) ([]Transaction, error
 }
 
 func (t Transaction) Note(note string) error {
+	data := make(map[string]string)
+	data["notes"] = note
+	return t.AddMetadata(data)
+}
+
+func (t Transaction) AddMetadata(meta map[string]string) error {
 	endpoint := "/transactions/" + t.ID
 
 	data := url.Values{}
-	data.Add("metadata[notes]", note)
+
+	for key, value := range meta {
+		data.Add("metadata["+key+"]", value)
+	}
 
 	req, err := t.client.NewRequest(http.MethodPatch, endpoint, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -149,7 +158,7 @@ func (t Transaction) Note(note string) error {
 	str := b.String()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to create note: %s", str)
+		return fmt.Errorf("failed to add metadata: %s", str)
 	}
 
 	return nil
