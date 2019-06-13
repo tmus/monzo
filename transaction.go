@@ -13,7 +13,7 @@ import (
 type Transaction struct {
 	ID       string
 	Amount   int
-	Currency AccountCurrency
+	Currency Currency
 
 	Description string
 	Notes       string
