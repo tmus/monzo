@@ -2,6 +2,7 @@ package monzo
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -12,10 +13,8 @@ import (
 	"time"
 )
 
-const (
-	// APIBase is the root of the Monzo API.
-	APIBase string = "https://api.monzo.com"
-)
+// APIBase is the root of the Monzo API.
+const APIBase string = "https://api.monzo.com"
 
 // Client is the way to interact with the Monzo API.
 type Client struct {
@@ -188,4 +187,21 @@ func (a Account) Withdraw(p Pot, amt int) (*Withdrawal, error) {
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	return &Withdrawal{req, &a.client.Client}, nil
+}
+
+// unwrapJSON takes a JSON response and unmarshals the contents
+// of the first item. Responses from Monzo are wrapped in a key
+// pertaining to the resource, which needs removing before
+// unmarshalling.
+func unwrapJSON(data []byte, wrapper string, v interface{}) error {
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(data, &objmap); err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(*objmap[wrapper], v); err != nil {
+		return err
+	}
+
+	return nil
 }
