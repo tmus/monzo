@@ -8,10 +8,16 @@ import (
 	"strings"
 )
 
+// FeedItemType defines the type of FeedItem to create.
 type FeedItemType string
 
+// FeedItemBasic is currently the only option supported by
+// Monzo for use through the API.
 const FeedItemBasic FeedItemType = "basic"
 
+// FeedItem represents a single row on the Monzo feed. API-
+// generated feed items are dismissable by the user and
+// should not be considered permanent.
 type FeedItem struct {
 	itemType FeedItemType
 	title    string
@@ -23,8 +29,11 @@ type FeedItem struct {
 	bodyColor  string
 }
 
-func MakeBasicFeedItem(title string, body string) FeedItem {
-	return FeedItem{
+// MakeFeedItem creates a basic item to display in the Monzo feed.
+// Additional values can be chained to the feed item to customise
+// it further.
+func MakeFeedItem(title string, body string) *FeedItem {
+	return &FeedItem{
 		itemType: FeedItemBasic,
 		title:    title,
 		body:     body,
@@ -35,7 +44,33 @@ func MakeBasicFeedItem(title string, body string) FeedItem {
 	}
 }
 
-func (a Account) AddFeedItem(fi FeedItem) error {
+// Image sets the image url on a FeedItem.
+func (fi *FeedItem) Image(url string) *FeedItem {
+	fi.imageURL = url
+	return fi
+}
+
+// BackgroundColor sets the color of the background.
+func (fi *FeedItem) BackgroundColor(hex string) *FeedItem {
+	fi.bgColor = hex
+	return fi
+}
+
+// TitleColor sets the color of the title text.
+func (fi *FeedItem) TitleColor(hex string) *FeedItem {
+	fi.titleColor = hex
+	return fi
+}
+
+// BodyColor changes the color of the body text.
+func (fi *FeedItem) BodyColor(hex string) *FeedItem {
+	fi.bodyColor = hex
+	return fi
+}
+
+// AddFeedItem adds a passed FeedItem to the Monzo Account to
+// display in the feed.
+func (a Account) AddFeedItem(fi *FeedItem) error {
 	endpoint := "/feed"
 	data := url.Values{}
 	data.Add("account_id", a.ID)
@@ -43,6 +78,18 @@ func (a Account) AddFeedItem(fi FeedItem) error {
 	data.Add("params[title]", fi.title)
 	data.Add("params[body]", fi.body)
 	data.Add("params[image_url]", fi.imageURL)
+
+	if fi.bgColor != "" {
+		data.Add("params[background_color]", fi.bgColor)
+	}
+
+	if fi.titleColor != "" {
+		data.Add("params[title_color]", fi.titleColor)
+	}
+
+	if fi.bodyColor != "" {
+		data.Add("params[body_color]", fi.bodyColor)
+	}
 
 	req, err := a.client.NewRequest(http.MethodPost, endpoint, strings.NewReader(data.Encode()))
 	if err != nil {
