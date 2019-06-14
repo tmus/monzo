@@ -7,13 +7,14 @@ import (
 	"net/http"
 )
 
+// Account represents a Monzo Account.
 type Account struct {
 	ID            string
 	Closed        bool
 	Created       string
 	Description   string
 	Type          AccountType
-	Currency      AccountCurrency
+	Currency      Currency
 	Country       string `json:"country_code"`
 	AccountNumber string `json:"account_number"`
 	SortCode      string `json:"sort_code"`
@@ -22,26 +23,19 @@ type Account struct {
 	client *Client
 }
 
-// AccountCurrency is a label for the currency that the account
-// represents. Currently only GBP?
-type AccountCurrency string
-
 // AccountType is the way that Monzo identifies accounts internally.
 type AccountType string
 
-const (
-	// PrepaidAccount is for accounts that were created before
-	// the UKRetailAccount existed and can no longer be opened.
-	PrepaidAccount AccountType = "uk_prepaid"
-	// UKRetailAccount is a Current Account.
-	UKRetailAccount AccountType = "uk_retail"
-	// UKRetailJointAccount is a Current Account shared by two
-	// Monzo users.
-	UKRetailJointAccount AccountType = "uk_retail_joint"
+// PrepaidAccount is for accounts that were created before
+// the UKRetailAccount existed and can no longer be opened.
+const PrepaidAccount AccountType = "uk_prepaid"
 
-	// CurrencyGBP is Pound Sterling.
-	CurrencyGBP AccountCurrency = "GBP"
-)
+// UKRetailAccount is a Current Account.
+const UKRetailAccount AccountType = "uk_retail"
+
+// UKRetailJointAccount is a Current Account shared by two
+// Monzo users.
+const UKRetailJointAccount AccountType = "uk_retail_joint"
 
 // Balance returns the current balance for the Account that
 // it is called on.

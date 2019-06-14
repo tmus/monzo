@@ -2,7 +2,6 @@ package monzo
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -18,11 +17,13 @@ type Pot struct {
 	Deleted  bool
 }
 
+// AllPots retrieves all the users pots from the Monzo API,
+// even the ones that have been deleted.
 func (c *Client) AllPots() ([]Pot, error) {
 	return c.pots()
 }
 
-// Pots returns a slice of Pot structs, belonging to the user.
+// Pots returns a slice of Pots that belong to the user.
 // Only pots that haven't been deleted are returned.
 func (c *Client) Pots() ([]Pot, error) {
 	pots, err := c.pots()
@@ -40,6 +41,7 @@ func (c *Client) Pots() ([]Pot, error) {
 	return filtered, nil
 }
 
+// Pot returns a single Pot from the Monzo API.
 func (c *Client) Pot(id string) (Pot, error) {
 	pots, err := c.pots()
 	if err != nil {
@@ -47,7 +49,7 @@ func (c *Client) Pot(id string) (Pot, error) {
 	}
 
 	// Monzo doesn't have the capability to retrieve a single
-	// pot, so we need to get all the users pot and filter
+	// pot, so we need to get all the user's pots and filter
 	// them down using the provided pot id.
 	for _, p := range pots {
 		if p.ID == id {
@@ -81,17 +83,4 @@ func (c *Client) pots() ([]Pot, error) {
 	}
 
 	return pots, nil
-}
-
-func unwrapJSON(data []byte, wrapper string, v interface{}) error {
-	var objmap map[string]*json.RawMessage
-	if err := json.Unmarshal(data, &objmap); err != nil {
-		return err
-	}
-
-	if err := json.Unmarshal(*objmap[wrapper], v); err != nil {
-		return err
-	}
-
-	return nil
 }
