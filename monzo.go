@@ -53,6 +53,8 @@ func (c *Client) Ping() error {
 	return nil
 }
 
+// NewRequest creates an *http.Request with some Monzo-specific
+// sensible defaults, such as Authorization headers.
 func (c *Client) NewRequest(method string, endpoint string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, APIBase+"/"+endpoint, body)
 	if err != nil {

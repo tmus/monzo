@@ -2,6 +2,7 @@ package monzo
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"time"
 )
 
+// Transaction represents a single item on the Monzo feed.
 type Transaction struct {
 	ID       string
 	Amount   int
@@ -29,14 +31,14 @@ type Transaction struct {
 	client *Client
 }
 
-// Transactions gets a number of transactions for an account from the Monzo API.
-// A bit useless atm because Monzo's API returns transactions in ascending order.
+// Transactions gets a number of transactions for an account.
 func (a Account) Transactions(limit int) ([]Transaction, error) {
 	params := make(map[string]string)
 	params["limit"] = strconv.Itoa(limit)
 	return a.getTransactions(params)
 }
 
+// Transaction returns a single transaction for an account.
 func (a Account) Transaction(id string) (Transaction, error) {
 	req, err := a.client.resourceRequest("transactions/" + id)
 	if err != nil {
@@ -129,12 +131,16 @@ func (a Account) getTransactions(params map[string]string) ([]Transaction, error
 	return transactions, nil
 }
 
+// Note stores a string against the Transaction.
 func (t Transaction) Note(note string) error {
 	data := make(map[string]string)
 	data["notes"] = note
 	return t.AddMetadata(data)
 }
 
+// AddMetadata saves Metadata against a Transaction.
+//
+// Currently this is not visible in the Monzo App.
 func (t Transaction) AddMetadata(meta map[string]string) error {
 	endpoint := "/transactions/" + t.ID
 
@@ -159,6 +165,39 @@ func (t Transaction) AddMetadata(meta map[string]string) error {
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to add metadata: %s", str)
+	}
+
+	return nil
+}
+
+// AddReceipt saves the given Receipt against the Transaction.
+func (t Transaction) AddReceipt(r *Receipt) error {
+	r.SetTransaction(t.ID)
+
+	data, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+
+	req, err := t.client.NewRequest(
+		http.MethodPut,
+		"/transaction-receipts",
+		bytes.NewBuffer(data),
+	)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, _ := t.client.Do(req)
+
+	b := new(bytes.Buffer)
+	b.ReadFrom(resp.Body)
+	str := b.String()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to add receipt: %s", str)
 	}
 
 	return nil
