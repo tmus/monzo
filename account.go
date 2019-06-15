@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 // Account represents a Monzo Account.
@@ -65,4 +67,63 @@ func (a Account) Balance() (Balance, error) {
 	}
 
 	return bal, nil
+}
+
+func (a Account) Webhooks() ([]Webhook, error) {
+	req, err := a.client.resourceRequest("webhooks")
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	q.Add("account_id", a.ID)
+
+	req.URL.RawQuery = q.Encode()
+
+	resp, _ := a.client.Do(req)
+
+	b := new(bytes.Buffer)
+	b.ReadFrom(resp.Body)
+	str := b.String()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch webhooks: %s", str)
+	}
+
+	bytes := b.Bytes()
+	var webhooks []Webhook
+	if err := unwrapJSON(bytes, "webhooks", &webhooks); err != nil {
+		return nil, err
+	}
+
+	return webhooks, nil
+}
+
+func (a Account) RegisterWebhook(webhook string) error {
+	data := url.Values{}
+	data.Add("account_id", a.ID)
+	data.Add("url", webhook)
+
+	req, err := a.client.NewRequest(
+		http.MethodPost,
+		"webhooks",
+		strings.NewReader(data.Encode()),
+	)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, _ := a.client.Do(req)
+
+	b := new(bytes.Buffer)
+	b.ReadFrom(resp.Body)
+	str := b.String()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to create webhook: %s", str)
+	}
+
+	return nil
 }
