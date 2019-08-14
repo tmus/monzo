@@ -3,6 +3,7 @@ package monzo
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -36,6 +37,10 @@ func NewClient(token string) *Client {
 // Ping attempts to connect to the Monzo API using the given
 // client.
 func (c *Client) Ping() error {
+	if c.Token == "" {
+		return errors.New("error pinging Monzo API. Client token cannot be empty")
+	}
+
 	req, err := c.NewRequest(http.MethodGet, "ping/whoami", nil)
 	if err != nil {
 		return err
